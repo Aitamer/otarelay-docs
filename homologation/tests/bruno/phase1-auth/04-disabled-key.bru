@@ -1,0 +1,32 @@
+meta {
+  name: Clé API désactivée → 403
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key_disabled}}
+}
+
+assert {
+  res.status: eq 403
+}
+
+tests {
+  test("code d'erreur KEY_DISABLED", function() {
+    const body = res.getBody();
+    expect(body).to.have.nested.property('error.code', 'KEY_DISABLED');
+  });
+}
+
+docs {
+  Nécessite la variable d'environnement `api_key_disabled` : une clé désactivée
+  (`is_active: false`) côté backoffice otarelay. Un Channel Manager ne peut pas désactiver sa
+  propre clé — demandez-en une à votre contact otarelay pour ce seul test. Voir README-tests.md.
+}

@@ -1,0 +1,51 @@
+meta {
+  name: stop_sell=true → stocké correctement
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/channel/restrictions
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hotel_id": "{{hotel_id}}",
+    "rate_plan_room_id": {{rate_plan_room_id_push}},
+    "date": "{{restriction_date_stop_sell}}",
+    "stop_sell": true
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("status ok, processed == 1 et failed == 0", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal('ok');
+    expect(body.processed).to.equal(1);
+    expect(body.failed).to.equal(0);
+  });
+}
+
+script:pre-request {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 201);
+  bru.setVar('restriction_date_stop_sell', d.toISOString().slice(0, 10));
+}
+
+docs {
+  Vérifie uniquement l'acceptation du push (200, processed=1) — la persistance effective de
+  stop_sell (calendar_restrictions + miroir calendar_availability) est validée côté suite
+  d'homologation interne (src/tests/homologation/phases/phase7-restrictions.ts), qui a un accès
+  direct à la base. Cette collection Bruno teste l'API en boîte noire, comme le ferait un CM.
+}

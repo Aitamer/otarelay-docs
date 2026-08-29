@@ -1,0 +1,999 @@
+{
+  "info": {
+    "_postman_id": "6f2b8e2a-9c3e-4c2a-8f1a-0d9e7a3b5c11",
+    "name": "otarelay Channel API v2 — Homologation",
+    "description": "Collection Postman équivalente à docs/homologation/tests/bruno/ — mêmes 7 phases, mêmes assertions. Voir docs/homologation/tests/bruno/README-tests.md pour le mode d'emploi (identique côté Postman : Collection Runner au lieu du Bruno Runner).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://api.dev.otarelay.com", "type": "string" },
+    { "key": "api_key", "value": "REMPLACER_PAR_VOTRE_CLE_SANDBOX", "type": "string" },
+    { "key": "hotel_id", "value": "REMPLACER_PAR_VOTRE_HOTEL_ID", "type": "string" },
+    { "key": "api_key_disabled", "value": "REMPLACER_PAR_UNE_CLE_DESACTIVEE_optionnel_phase1", "type": "string" },
+    { "key": "api_key_expired", "value": "REMPLACER_PAR_UNE_CLE_EXPIREE_optionnel_phase1", "type": "string" },
+    { "key": "rate_plan_room_id", "value": "", "type": "string" },
+    { "key": "rate_plan_room_id_push", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Phase 1 — Authentification",
+      "item": [
+        {
+          "name": "01 - Clé API valide → 200",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('retourne le hotel_id demandé', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.hotel_id).to.eql(pm.collectionVariables.get('hotel_id'));",
+                  "});",
+                  "pm.test('retourne associations[] et summary', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.associations).to.be.an('array');",
+                  "    pm.expect(body.summary).to.have.property('total');",
+                  "    pm.expect(body.summary).to.have.property('mapped');",
+                  "    pm.expect(body.summary).to.have.property('unmapped');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - Header Authorization manquant → 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"code d'erreur MISSING_AUTH_HEADER\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error.code).to.eql('MISSING_AUTH_HEADER');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 - Clé API inconnue → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer sk_invalid_0000000000000000000000000000000000000000000000000000", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"code d'erreur INVALID_API_KEY\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error.code).to.eql('INVALID_API_KEY');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "04 - Clé API désactivée → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key_disabled}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            },
+            "description": "Nécessite la variable de collection api_key_disabled (clé is_active=false) — à obtenir auprès de votre contact otarelay, un CM ne peut pas désactiver sa propre clé."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"code d'erreur KEY_DISABLED\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error.code).to.eql('KEY_DISABLED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "05 - Clé API expirée → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key_expired}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            },
+            "description": "Nécessite la variable de collection api_key_expired (expires_at dépassé) — à obtenir auprès de votre contact otarelay."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"code d'erreur KEY_EXPIRED\", function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error.code).to.eql('KEY_EXPIRED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 2 — Capabilities",
+      "item": [
+        {
+          "name": "01 - GET capabilities (public, sans authentification) → 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/channel/capabilities",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "capabilities"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('ota_name et version présents', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.ota_name).to.eql('otarelay');",
+                  "    pm.expect(body.version).to.exist;",
+                  "});",
+                  "pm.test('les 3 capabilities de push sont supportées et batch', function () {",
+                  "    const body = pm.response.json();",
+                  "    ['availability', 'rates', 'restrictions'].forEach(function (key) {",
+                  "        pm.expect(body.capabilities[key].supported).to.eql(true);",
+                  "        pm.expect(body.capabilities[key].batch).to.eql(true);",
+                  "        pm.expect(body.capabilities[key].fields).to.be.an('array').that.is.not.empty;",
+                  "    });",
+                  "});",
+                  "pm.test('limits.batch_size et limits.rate_limit présents', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.limits).to.have.property('batch_size');",
+                  "    pm.expect(body.limits).to.have.property('rate_limit');",
+                  "});",
+                  "pm.test('mapping.endpoint correct', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.mapping.endpoint).to.eql('POST /channel/association-mapping');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 3 — Associations",
+      "item": [
+        {
+          "name": "01 - Liste des associations — aucun mapping confirmé",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            },
+            "description": "Capture rate_plan_room_id et rate_plan_room_id_push (variables de collection) pour le reste de la collection. 'empty' = aucun mapping confirmé pour ce canal, pas 'associations vides' (HTL_TEST expose 9 associations pivot par défaut)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "const body = pm.response.json();",
+                  "pm.test('chaque association expose id, room_type_id, rate_plan_id, mapped', function () {",
+                  "    pm.expect(body.associations).to.be.an('array').that.is.not.empty;",
+                  "    body.associations.forEach(function (assoc) {",
+                  "        pm.expect(assoc).to.have.property('id');",
+                  "        pm.expect(assoc).to.have.property('room_type_id');",
+                  "        pm.expect(assoc).to.have.property('rate_plan_id');",
+                  "        pm.expect(assoc).to.have.property('mapped');",
+                  "    });",
+                  "});",
+                  "pm.test('summary.total == associations.length et mapped+unmapped == total', function () {",
+                  "    pm.expect(body.summary.total).to.eql(body.associations.length);",
+                  "    pm.expect(body.summary.mapped + body.summary.unmapped).to.eql(body.summary.total);",
+                  "});",
+                  "if (body.associations && body.associations.length > 0) {",
+                  "    pm.collectionVariables.set('rate_plan_room_id', body.associations[0].id);",
+                  "    const second = body.associations[1] || body.associations[0];",
+                  "    pm.collectionVariables.set('rate_plan_room_id_push', second.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - Vérification du résumé summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('summary est un objet numérique cohérent', function () {",
+                  "    const summary = pm.response.json().summary;",
+                  "    pm.expect(summary.total).to.be.a('number');",
+                  "    pm.expect(summary.mapped).to.be.a('number');",
+                  "    pm.expect(summary.unmapped).to.be.a('number');",
+                  "    pm.expect(summary.mapped + summary.unmapped).to.eql(summary.total);",
+                  "});",
+                  "pm.test('channel_id présent', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.channel_id).to.be.a('string').and.not.empty;",
+                  "});",
+                  "pm.test('les associations non mappées apparaissent en premier', function () {",
+                  "    const associations = pm.response.json().associations;",
+                  "    const flags = associations.map(function (a) { return a.mapped; });",
+                  "    const firstMappedIndex = flags.indexOf(true);",
+                  "    if (firstMappedIndex !== -1) {",
+                  "        const before = flags.slice(0, firstMappedIndex);",
+                  "        pm.expect(before.every(function (m) { return m === false; })).to.eql(true);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 4 — Mapping associations",
+      "item": [
+        {
+          "name": "01 - POST association-mapping → 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id}}}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/association-mapping",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "association-mapping"]
+            },
+            "description": "Idempotent — rejouer ce test retourne toujours 201 (upsert côté serveur, pas de 409)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+                  "pm.test('champs requis présents', function () {",
+                  "    const body = pm.response.json();",
+                  "    ['id', 'hotel_id', 'channel_id', 'rate_plan_room_id', 'room_type_id', 'rate_plan_id', 'confirmed_at'].forEach(function (field) {",
+                  "        pm.expect(body).to.have.property(field);",
+                  "    });",
+                  "});",
+                  "pm.test('rate_plan_room_id correspond à celui envoyé', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(String(body.rate_plan_room_id)).to.eql(String(pm.collectionVariables.get('rate_plan_room_id')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - GET associations — vérifie mapped:true",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "room-type-rate-plan-associations"],
+              "query": [{ "key": "hotel_id", "value": "{{hotel_id}}" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"l'association mappée apparaît avec mapped:true\", function () {",
+                  "    const body = pm.response.json();",
+                  "    const target = body.associations.find(function (a) {",
+                  "        return String(a.id) === String(pm.collectionVariables.get('rate_plan_room_id'));",
+                  "    });",
+                  "    pm.expect(target, 'association introuvable').to.exist;",
+                  "    pm.expect(target.mapped).to.eql(true);",
+                  "    pm.expect(target.confirmed_at).to.not.eql(null);",
+                  "});",
+                  "pm.test('summary.mapped >= 1', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.summary.mapped).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 - DELETE association-mapping → 200",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id}}}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/association-mapping",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "association-mapping"]
+            },
+            "description": "Termine volontairement rate_plan_room_id en état non-mappé. Les phases 5/6/7 utilisent rate_plan_room_id_push (association distincte, reconfirmée automatiquement) et ne dépendent donc pas de l'état laissé ici."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('réponse confirme mapped:false', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body).to.have.property('message');",
+                  "    pm.expect(body.mapped).to.eql(false);",
+                  "    pm.expect(String(body.rate_plan_room_id)).to.eql(String(pm.collectionVariables.get('rate_plan_room_id')));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 5 — Disponibilités",
+      "item": [
+        {
+          "name": "01 - Push disponibilité valide (entrée unique) → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{push_date_single}}\", \"available_rooms\": 5}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/availability",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "availability"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 30);",
+                  "pm.collectionVariables.set('push_date_single', d.toISOString().slice(0, 10));",
+                  "",
+                  "// Garantit que rate_plan_room_id_push est mappé pour ce canal avant le push — idempotent,",
+                  "// nécessaire car la phase 4 démappe délibérément rate_plan_room_id (association distincte).",
+                  "pm.sendRequest({",
+                  "    url: pm.collectionVariables.get('base_url') + '/channel/association-mapping',",
+                  "    method: 'POST',",
+                  "    header: {",
+                  "        'Authorization': 'Bearer ' + pm.collectionVariables.get('api_key'),",
+                  "        'Content-Type': 'application/json'",
+                  "    },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({",
+                  "            hotel_id: pm.collectionVariables.get('hotel_id'),",
+                  "            rate_plan_room_id: Number(pm.collectionVariables.get('rate_plan_room_id_push'))",
+                  "        })",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (err || !res || res.code >= 400) {",
+                  "        console.warn('Pré-confirmation du mapping échouée', err || (res && res.code));",
+                  "    }",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok, processed=1, failed=0', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ok');",
+                  "    pm.expect(body.processed).to.eql(1);",
+                  "    pm.expect(body.failed).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - Push disponibilité par lot — 30 jours → processed=30",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{availability_batch}}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/availability",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "availability"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const hotelId = pm.collectionVariables.get('hotel_id');",
+                  "const ratePlanRoomId = Number(pm.collectionVariables.get('rate_plan_room_id_push'));",
+                  "const entries = [];",
+                  "for (let i = 0; i < 30; i++) {",
+                  "    const d = new Date();",
+                  "    d.setUTCDate(d.getUTCDate() + 40 + i);",
+                  "    entries.push({",
+                  "        hotel_id: hotelId,",
+                  "        rate_plan_room_id: ratePlanRoomId,",
+                  "        date: d.toISOString().slice(0, 10),",
+                  "        available_rooms: 4",
+                  "    });",
+                  "}",
+                  "pm.collectionVariables.set('availability_batch', JSON.stringify(entries));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok, processed=30, failed=0', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ok');",
+                  "    pm.expect(body.processed).to.eql(30);",
+                  "    pm.expect(body.failed).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 - available_rooms négatif → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{push_date_invalid}}\", \"available_rooms\": -1}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/availability",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "availability"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 31);",
+                  "pm.collectionVariables.set('push_date_invalid', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('erreur VALIDATION_ERROR', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 6 — Tarifs",
+      "item": [
+        {
+          "name": "01 - Push tarif valide (entrée unique) → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{rate_date_single}}\", \"price\": 129.90, \"currency\": \"EUR\"}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/rates",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "rates"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 100);",
+                  "pm.collectionVariables.set('rate_date_single', d.toISOString().slice(0, 10));",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: pm.collectionVariables.get('base_url') + '/channel/association-mapping',",
+                  "    method: 'POST',",
+                  "    header: {",
+                  "        'Authorization': 'Bearer ' + pm.collectionVariables.get('api_key'),",
+                  "        'Content-Type': 'application/json'",
+                  "    },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({",
+                  "            hotel_id: pm.collectionVariables.get('hotel_id'),",
+                  "            rate_plan_room_id: Number(pm.collectionVariables.get('rate_plan_room_id_push'))",
+                  "        })",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (err || !res || res.code >= 400) {",
+                  "        console.warn('Pré-confirmation du mapping échouée', err || (res && res.code));",
+                  "    }",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok, processed=1, failed=0', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ok');",
+                  "    pm.expect(body.processed).to.eql(1);",
+                  "    pm.expect(body.failed).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - Push tarifs par lot — 30 jours → processed=30",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{{rates_batch}}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/rates",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "rates"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const hotelId = pm.collectionVariables.get('hotel_id');",
+                  "const ratePlanRoomId = Number(pm.collectionVariables.get('rate_plan_room_id_push'));",
+                  "const entries = [];",
+                  "for (let i = 0; i < 30; i++) {",
+                  "    const d = new Date();",
+                  "    d.setUTCDate(d.getUTCDate() + 110 + i);",
+                  "    entries.push({",
+                  "        hotel_id: hotelId,",
+                  "        rate_plan_room_id: ratePlanRoomId,",
+                  "        date: d.toISOString().slice(0, 10),",
+                  "        price: 99.5 + i,",
+                  "        currency: 'EUR'",
+                  "    });",
+                  "}",
+                  "pm.collectionVariables.set('rates_batch', JSON.stringify(entries));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok, processed=30, failed=0', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ok');",
+                  "    pm.expect(body.processed).to.eql(30);",
+                  "    pm.expect(body.failed).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 - price négatif → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{rate_date_invalid}}\", \"price\": -10}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/rates",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "rates"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 101);",
+                  "pm.collectionVariables.set('rate_date_invalid', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('erreur VALIDATION_ERROR', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Phase 7 — Restrictions",
+      "item": [
+        {
+          "name": "01 - Push restrictions valides → 200",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{restriction_date_base}}\", \"min_stay\": 2, \"max_stay\": 14}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/restrictions",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "restrictions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 200);",
+                  "pm.collectionVariables.set('restriction_date_base', d.toISOString().slice(0, 10));",
+                  "",
+                  "pm.sendRequest({",
+                  "    url: pm.collectionVariables.get('base_url') + '/channel/association-mapping',",
+                  "    method: 'POST',",
+                  "    header: {",
+                  "        'Authorization': 'Bearer ' + pm.collectionVariables.get('api_key'),",
+                  "        'Content-Type': 'application/json'",
+                  "    },",
+                  "    body: {",
+                  "        mode: 'raw',",
+                  "        raw: JSON.stringify({",
+                  "            hotel_id: pm.collectionVariables.get('hotel_id'),",
+                  "            rate_plan_room_id: Number(pm.collectionVariables.get('rate_plan_room_id_push'))",
+                  "        })",
+                  "    }",
+                  "}, function (err, res) {",
+                  "    if (err || !res || res.code >= 400) {",
+                  "        console.warn('Pré-confirmation du mapping échouée', err || (res && res.code));",
+                  "    }",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok, processed=1, failed=0', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ok');",
+                  "    pm.expect(body.processed).to.eql(1);",
+                  "    pm.expect(body.failed).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "02 - stop_sell=true → stocké correctement",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{restriction_date_stop_sell}}\", \"stop_sell\": true}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/restrictions",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "restrictions"]
+            },
+            "description": "Vérifie l'acceptation du push (200, processed=1) en boîte noire. La persistance effective (calendar_restrictions + miroir calendar_availability) est validée côté suite d'homologation interne, qui a un accès direct à la base."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 201);",
+                  "pm.collectionVariables.set('restriction_date_stop_sell', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('status ok, processed=1, failed=0', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.status).to.eql('ok');",
+                  "    pm.expect(body.processed).to.eql(1);",
+                  "    pm.expect(body.failed).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "03 - min_stay > max_stay → 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{api_key}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"hotel_id\": \"{{hotel_id}}\", \"rate_plan_room_id\": {{rate_plan_room_id_push}}, \"date\": \"{{restriction_date_invalid}}\", \"min_stay\": 5, \"max_stay\": 2}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/channel/restrictions",
+              "host": ["{{base_url}}"],
+              "path": ["channel", "restrictions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const d = new Date();",
+                  "d.setUTCDate(d.getUTCDate() + 202);",
+                  "pm.collectionVariables.set('restriction_date_invalid', d.toISOString().slice(0, 10));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('erreur VALIDATION_ERROR', function () {",
+                  "    const body = pm.response.json();",
+                  "    pm.expect(body.error).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    }
+  ]
+}

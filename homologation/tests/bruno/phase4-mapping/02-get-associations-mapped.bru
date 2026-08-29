@@ -1,0 +1,34 @@
+meta {
+  name: GET associations — vérifie mapped:true après POST
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("l'association mappée apparaît avec mapped:true et confirmed_at renseigné", function() {
+    const body = res.getBody();
+    const target = body.associations.find((a) => String(a.id) === String(bru.getVar('rate_plan_room_id')));
+    expect(target, 'association introuvable dans la liste').to.exist;
+    expect(target.mapped).to.equal(true);
+    expect(target.confirmed_at).to.not.equal(null);
+  });
+
+  test("summary.mapped est au moins égal à 1", function() {
+    const body = res.getBody();
+    expect(body.summary.mapped).to.be.at.least(1);
+  });
+}

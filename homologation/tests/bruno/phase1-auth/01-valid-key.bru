@@ -1,0 +1,35 @@
+meta {
+  name: Clé API valide → 200
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("retourne le hotel_id demandé", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('hotel_id', bru.getEnvVar('hotel_id'));
+  });
+
+  test("retourne un tableau associations et un résumé summary", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('associations').that.is.an('array');
+    expect(body).to.have.property('summary');
+    expect(body.summary).to.have.property('total');
+    expect(body.summary).to.have.property('mapped');
+    expect(body.summary).to.have.property('unmapped');
+  });
+}

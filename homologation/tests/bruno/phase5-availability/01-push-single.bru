@@ -1,0 +1,64 @@
+meta {
+  name: Push disponibilité valide (entrée unique) → 200
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/channel/availability
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hotel_id": "{{hotel_id}}",
+    "rate_plan_room_id": {{rate_plan_room_id_push}},
+    "date": "{{push_date_single}}",
+    "available_rooms": 5
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("status ok, processed == 1 et failed == 0", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal('ok');
+    expect(body.processed).to.equal(1);
+    expect(body.failed).to.equal(0);
+  });
+}
+
+script:pre-request {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 30);
+  bru.setVar('push_date_single', d.toISOString().slice(0, 10));
+
+  // Garantit que rate_plan_room_id_push est mappé pour ce canal avant le push — idempotent
+  // (upsert côté serveur), donc sans risque même si déjà mappé. Nécessaire car la phase 4 démappe
+  // délibérément rate_plan_room_id à des fins de démonstration (voir phase4-mapping/03-delete-mapping.bru) ;
+  // rate_plan_room_id_push est une association distincte, mais on la (re)confirme ici pour que
+  // cette phase reste rejouable indépendamment, dans n'importe quel ordre.
+  const mappingRes = await fetch(`${bru.getEnvVar('base_url')}/channel/association-mapping`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${bru.getEnvVar('api_key')}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      hotel_id: bru.getEnvVar('hotel_id'),
+      rate_plan_room_id: Number(bru.getVar('rate_plan_room_id_push')),
+    }),
+  });
+  if (!mappingRes.ok) {
+    console.warn('Pré-confirmation du mapping échouée (status ' + mappingRes.status + ') — le push suivant risque de retourner 400 ASSOCIATION_NOT_MAPPED.');
+  }
+}

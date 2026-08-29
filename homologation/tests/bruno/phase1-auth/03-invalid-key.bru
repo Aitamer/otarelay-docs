@@ -1,0 +1,26 @@
+meta {
+  name: Clé API inconnue → 401
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer sk_invalid_0000000000000000000000000000000000000000000000000000
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("code d'erreur INVALID_API_KEY", function() {
+    const body = res.getBody();
+    expect(body).to.have.nested.property('error.code', 'INVALID_API_KEY');
+  });
+}

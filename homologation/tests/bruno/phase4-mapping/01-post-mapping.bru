@@ -1,0 +1,46 @@
+meta {
+  name: POST association-mapping — mapper une association → 201
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/channel/association-mapping
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hotel_id": "{{hotel_id}}",
+    "rate_plan_room_id": {{rate_plan_room_id}}
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+tests {
+  test("réponse contient id, hotel_id, channel_id, rate_plan_room_id, room_type_id, rate_plan_id, confirmed_at", function() {
+    const body = res.getBody();
+    for (const field of ['id', 'hotel_id', 'channel_id', 'rate_plan_room_id', 'room_type_id', 'rate_plan_id', 'confirmed_at']) {
+      expect(body).to.have.property(field);
+    }
+  });
+
+  test("rate_plan_room_id correspond à celui envoyé", function() {
+    const body = res.getBody();
+    expect(String(body.rate_plan_room_id)).to.equal(String(bru.getVar('rate_plan_room_id')));
+  });
+}
+
+docs {
+  Idempotent : rejouer ce test après un premier passage réussi retourne toujours 201 avec
+  confirmed_at mis à jour (upsert côté serveur, pas de 409) — voir api-reference.md.
+}

@@ -1,0 +1,43 @@
+meta {
+  name: min_stay > max_stay → 400
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/channel/restrictions
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hotel_id": "{{hotel_id}}",
+    "rate_plan_room_id": {{rate_plan_room_id_push}},
+    "date": "{{restriction_date_invalid}}",
+    "min_stay": 5,
+    "max_stay": 2
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+tests {
+  test("erreur de validation VALIDATION_ERROR retournée", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('error', 'VALIDATION_ERROR');
+  });
+}
+
+script:pre-request {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() + 202);
+  bru.setVar('restriction_date_invalid', d.toISOString().slice(0, 10));
+}

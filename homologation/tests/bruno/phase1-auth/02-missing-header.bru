@@ -1,0 +1,26 @@
+meta {
+  name: Header Authorization manquant → 401
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}
+
+tests {
+  test("code d'erreur MISSING_AUTH_HEADER", function() {
+    const body = res.getBody();
+    expect(body).to.have.nested.property('error.code', 'MISSING_AUTH_HEADER');
+  });
+}
+
+docs {
+  Aucun en-tête `Authorization` n'est envoyé volontairement — voir errors.md#401--unauthorized.
+}

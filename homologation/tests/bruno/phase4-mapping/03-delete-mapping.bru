@@ -1,0 +1,44 @@
+meta {
+  name: DELETE association-mapping — supprimer le mapping → 200
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{base_url}}/channel/association-mapping
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "hotel_id": "{{hotel_id}}",
+    "rate_plan_room_id": {{rate_plan_room_id}}
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("réponse confirme mapped:false et le bon rate_plan_room_id", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('message');
+    expect(body.mapped).to.equal(false);
+    expect(String(body.rate_plan_room_id)).to.equal(String(bru.getVar('rate_plan_room_id')));
+  });
+}
+
+docs {
+  Ce test démontre le cycle complet mapper → vérifier → démapper sur `rate_plan_room_id`
+  (capturé en phase 3). Les phases 5, 6 et 7 utilisent une association distincte
+  (`rate_plan_room_id_push`), reconfirmée automatiquement par un script pre-request sur leur
+  premier test — elles ne dépendent donc pas de l'état laissé par ce test, et la collection reste
+  rejouable dans l'ordre sans étape manuelle entre les phases.
+}

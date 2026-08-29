@@ -1,0 +1,49 @@
+meta {
+  name: GET capabilities (public, sans authentification) → 200
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/channel/capabilities
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("ota_name et version présents", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('ota_name', 'otarelay');
+    expect(body).to.have.property('version');
+  });
+
+  test("les 3 capabilities de push sont supportées et acceptent un lot (batch)", function() {
+    const body = res.getBody();
+    for (const key of ['availability', 'rates', 'restrictions']) {
+      expect(body.capabilities).to.have.property(key);
+      expect(body.capabilities[key].supported).to.equal(true);
+      expect(body.capabilities[key].batch).to.equal(true);
+      expect(body.capabilities[key].fields).to.be.an('array').that.is.not.empty;
+    }
+  });
+
+  test("limits.batch_size et limits.rate_limit présents", function() {
+    const body = res.getBody();
+    expect(body.limits).to.have.property('batch_size');
+    expect(body.limits).to.have.property('rate_limit');
+  });
+
+  test("mapping.endpoint pointe vers POST /channel/association-mapping", function() {
+    const body = res.getBody();
+    expect(body.mapping.endpoint).to.equal('POST /channel/association-mapping');
+  });
+}
+
+docs {
+  Seul endpoint de la collection ne nécessitant aucune authentification — voir
+  api-reference.md#get-channelcapabilities.
+}

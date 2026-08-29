@@ -1,0 +1,57 @@
+meta {
+  name: Liste des associations — aucun mapping confirmé
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("chaque association expose id, room_type_id, rate_plan_id, mapped", function() {
+    const body = res.getBody();
+    expect(body.associations).to.be.an('array').that.is.not.empty;
+    for (const assoc of body.associations) {
+      expect(assoc).to.have.property('id');
+      expect(assoc).to.have.property('room_type_id');
+      expect(assoc).to.have.property('rate_plan_id');
+      expect(assoc).to.have.property('mapped');
+    }
+  });
+
+  test("summary.total == associations.length et mapped+unmapped == total", function() {
+    const body = res.getBody();
+    expect(body.summary.total).to.equal(body.associations.length);
+    expect(body.summary.mapped + body.summary.unmapped).to.equal(body.summary.total);
+  });
+}
+
+script:post-response {
+  // Capture deux associations distinctes pour le reste de la collection :
+  // - rate_plan_room_id      : utilisée par la phase 4 (démonstration mapper → vérifier → démapper)
+  // - rate_plan_room_id_push : utilisée par les phases 5/6/7 (push), reconfirmée automatiquement
+  //   par leur premier test pour ne jamais dépendre de l'état laissé par la phase 4.
+  const body = res.getBody();
+  if (body.associations && body.associations.length > 0) {
+    bru.setVar('rate_plan_room_id', body.associations[0].id);
+    const second = body.associations[1] || body.associations[0];
+    bru.setVar('rate_plan_room_id_push', second.id);
+  }
+}
+
+docs {
+  Nom du fichier hérité du plan de test fourni ("empty" = aucun mapping confirmé pour ce canal sur
+  cet hôtel, pas "associations vides" — le référentiel HTL_TEST expose bien 9 associations
+  pivot par défaut, voir sandbox.md).
+}

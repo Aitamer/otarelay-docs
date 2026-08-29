@@ -1,0 +1,51 @@
+meta {
+  name: Push tarifs par lot — 30 jours → 200, processed=30
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{base_url}}/channel/rates
+  body: json
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+  Content-Type: application/json
+}
+
+body:json {
+  {{rates_batch}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("status ok, processed == 30 et failed == 0", function() {
+    const body = res.getBody();
+    expect(body.status).to.equal('ok');
+    expect(body.processed).to.equal(30);
+    expect(body.failed).to.equal(0);
+  });
+}
+
+script:pre-request {
+  const hotelId = bru.getEnvVar('hotel_id');
+  const ratePlanRoomId = Number(bru.getVar('rate_plan_room_id_push'));
+  const entries = [];
+  for (let i = 0; i < 30; i++) {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() + 110 + i); // plage distincte du test 01 (+100) pour éviter toute collision d'upsert
+    entries.push({
+      hotel_id: hotelId,
+      rate_plan_room_id: ratePlanRoomId,
+      date: d.toISOString().slice(0, 10),
+      price: 99.5 + i,
+      currency: 'EUR',
+    });
+  }
+  bru.setVar('rates_batch', JSON.stringify(entries));
+}

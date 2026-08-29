@@ -1,0 +1,43 @@
+meta {
+  name: Vérification du résumé summary { total, mapped, unmapped }
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+tests {
+  test("summary est un objet numérique cohérent", function() {
+    const { summary } = res.getBody();
+    expect(summary.total).to.be.a('number');
+    expect(summary.mapped).to.be.a('number');
+    expect(summary.unmapped).to.be.a('number');
+    expect(summary.mapped + summary.unmapped).to.equal(summary.total);
+  });
+
+  test("channel_id résolu depuis la clé API est présent", function() {
+    const body = res.getBody();
+    expect(body).to.have.property('channel_id').that.is.a('string').and.is.not.empty;
+  });
+
+  test("les associations non mappées apparaissent en premier (tri)", function() {
+    const { associations } = res.getBody();
+    const mappedFlags = associations.map((a) => a.mapped);
+    const firstMappedIndex = mappedFlags.indexOf(true);
+    if (firstMappedIndex !== -1) {
+      expect(mappedFlags.slice(0, firstMappedIndex).every((m) => m === false)).to.equal(true);
+    }
+  });
+}

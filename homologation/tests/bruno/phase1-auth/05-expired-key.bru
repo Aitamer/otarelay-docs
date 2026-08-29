@@ -1,0 +1,32 @@
+meta {
+  name: Clé API expirée → 403
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{base_url}}/channel/room-type-rate-plan-associations?hotel_id={{hotel_id}}
+  body: none
+  auth: none
+}
+
+headers {
+  Authorization: Bearer {{api_key_expired}}
+}
+
+assert {
+  res.status: eq 403
+}
+
+tests {
+  test("code d'erreur KEY_EXPIRED", function() {
+    const body = res.getBody();
+    expect(body).to.have.nested.property('error.code', 'KEY_EXPIRED');
+  });
+}
+
+docs {
+  Nécessite la variable d'environnement `api_key_expired` : une clé dont `expires_at` est déjà
+  dépassé. Comme pour la clé désactivée, seul otarelay peut émettre une telle clé de test — voir
+  README-tests.md.
+}
